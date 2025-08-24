@@ -45,10 +45,6 @@
     .reader-controls{display:flex;justify-content:center;align-items:center;gap:1rem;padding:1rem;background:#f5f5f5;border-bottom:1px solid #ddd;flex-wrap:wrap}
     #pdfViewer{width:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:1rem}
     #pdfViewer canvas{display:block;margin:1rem auto;box-shadow:var(--shadow);max-width:100%}
-    #epub-container{width:100%;height:100%;overflow:auto;background:#f9f9f9;padding:2rem;box-sizing:border-box}
-    #viewer{max-width:800px;margin:0 auto;background:white;padding:3rem;box-shadow:var(--shadow);min-height:100%;line-height:1.8;font-size:1.1rem}
-    .page-navigation{display:flex;align-items:center;gap:0.8rem}
-    .epub-controls{display:flex;justify-content:center;gap:1rem;margin:1.5rem 0}
     .loading{display:flex;justify-content:center;align-items:center;height:200px}
     .spinner{border:4px solid rgba(0,0,0,0.1);border-radius:50%;border-top:4px solid var(--primary);width:40px;height:40px;animation:spin 1s linear infinite}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
@@ -58,7 +54,6 @@
     .notification.show{transform:translateX(0)}
     @media (max-width:768px){
       .books-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem}
-      #viewer{padding:1.5rem}
       .reader-controls{flex-direction:column;gap:0.5rem}
     }
   </style>
@@ -97,10 +92,22 @@
     <h3 class="form-title">Carica un nuovo libro</h3>
     <input type="text" id="bookTitle" placeholder="Titolo" required>
     <input type="text" id="bookAuthor" placeholder="Autore" required>
-    <input type="file" id="bookFile" accept=".pdf,.epub" required>
+    <input type="file" id="bookFile" accept=".pdf" required>
     <div style="display:flex;justify-content:flex-end;gap:.5rem">
       <button type="button" id="cancelUpload" class="btn btn-danger">Annulla</button>
       <button type="submit" class="btn">Carica</button>
+    </div>
+  </form>
+</div>
+
+<div id="editModal" class="modal">
+  <form id="editForm">
+    <h3 class="form-title">Modifica libro</h3>
+    <input type="text" id="editTitle" placeholder="Titolo" required>
+    <input type="text" id="editAuthor" placeholder="Autore" required>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem">
+      <button type="button" id="cancelEdit" class="btn btn-danger">Annulla</button>
+      <button type="submit" class="btn">Salva</button>
     </div>
   </form>
 </div>
@@ -111,7 +118,7 @@
     <button class="btn" id="closeReader">✕ Chiudi</button>
   </div>
   
-  <div class="reader-controls" id="pdfControls" hidden>
+  <div class="reader-controls" id="pdfControls">
     <button class="btn" id="prevPage">← Precedente</button>
     <div class="page-navigation">
       <span>Pagina: </span>
@@ -123,14 +130,7 @@
   </div>
   
   <div class="reader-content">
-    <div id="pdfViewer" hidden></div>
-    <div id="epub-container" hidden>
-      <div id="viewer" class="spreads"></div>
-      <div class="epub-controls">
-        <button class="btn" id="prevChapter">← Capitolo Precedente</button>
-        <button class="btn" id="nextChapter">Capitolo Successivo →</button>
-      </div>
-    </div>
+    <div id="pdfViewer"></div>
   </div>
 </div>
 
@@ -139,13 +139,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
 
 <script>
+// Configurazione PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
 const SUPABASE_URL = "https://zflxzjapcclnscbziwlt.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmbHh6amFwY2NsbnNjYnppd2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5ODIwMzEsImV4cCI6MjA3MTU1ODAzMX0.8W3FI_fsZtA0EH0TnHJwRbLbvaU476mLAW0DVw7mItI";
+const SUPABASE_KEY = "tuo_supabase_key";
 const BUCKET = "library";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -161,225 +161,203 @@ let pdfRendering = false;
 let pdfPageNumPending = null;
 let pdfTotalPages = 0;
 let currentBook = null;
-let rendition = null;
 
-function showNotification(message, isError = false) {
+// Funzioni utilità
+function showNotification(message, isError=false){
   notification.textContent = message;
   notification.style.background = isError ? '#c62828' : 'var(--primary)';
   notification.classList.add('show');
-  
-  setTimeout(() => { notification.classList.remove('show'); }, 3000);
+  setTimeout(()=>notification.classList.remove('show'),3000);
 }
 
-function showAuth() { authView.classList.remove('hidden'); appView.classList.add('hidden'); }
-function showApp() { authView.classList.add('hidden'); appView.classList.remove('hidden'); }
+function showAuth(){ authView.classList.remove('hidden'); appView.classList.add('hidden'); }
+function showApp(){ authView.classList.add('hidden'); appView.classList.remove('hidden'); }
 
-supabase.auth.onAuthStateChange((event) => {
-  if (event === 'SIGNED_IN') { showApp(); loadBooks(); }
-  if (event === 'SIGNED_OUT') { showAuth(); }
+// Autenticazione
+supabase.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_IN'){ showApp(); loadBooks(); }
+  if(event==='SIGNED_OUT'){ showAuth(); }
 });
 
-window.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', async ()=>{
   const { data } = await supabase.auth.getSession();
-  if (data.session) { showApp(); loadBooks(); } else { showAuth(); }
+  if(data.session){ showApp(); loadBooks(); } else { showAuth(); }
 });
 
-document.getElementById('authForm').addEventListener('submit', async e => {
+document.getElementById('authForm').addEventListener('submit', async e=>{
   e.preventDefault();
-  authMsg.textContent = '';
+  authMsg.textContent='';
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
-  
-  let { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    const { error: err } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: location.origin }
-    });
-    if (err) { authMsg.textContent = err.message; return; }
-    authMsg.textContent = 'Registrazione riuscita. Controlla la tua email per confermare.';
+  let { error } = await supabase.auth.signInWithPassword({email,password});
+  if(error){
+    const { error: err } = await supabase.auth.signUp({ email,password, options:{emailRedirectTo:location.origin} });
+    if(err){ authMsg.textContent=err.message; return; }
+    authMsg.textContent='Registrazione riuscita. Controlla la tua email per confermare.';
     showNotification('Registrazione completata! Controlla la tua email.');
   } else { showNotification('Accesso effettuato con successo!'); }
 });
 
-async function loadBooks() {
-  booksGrid.innerHTML = `<div class="loading"><div class="spinner"></div></div>`;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  
-  const { data, error } = await supabase
-    .from('books')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
-  
-  if (error) {
-    booksGrid.innerHTML = `<div class="empty-state"><div>Errore nel caricamento della libreria</div><div>${error.message}</div></div>`;
+// Caricamento libri
+async function loadBooks(){
+  booksGrid.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  const { data:{user} } = await supabase.auth.getUser();
+  if(!user) return;
+  const { data, error } = await supabase.from('books').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
+  if(error){
+    booksGrid.innerHTML=`<div class="empty-state"><div>Errore nel caricamento</div><div>${error.message}</div></div>`;
     return;
   }
-  if (data.length === 0) {
-    booksGrid.innerHTML = `<div class="empty-state"><div>📚</div><h3>La tua libreria è vuota</h3><p>Carica il tuo primo libro cliccando sul pulsante in alto</p></div>`;
+  if(data.length===0){
+    booksGrid.innerHTML=`<div class="empty-state"><div>📚</div><h3>La tua libreria è vuota</h3><p>Carica il tuo primo libro cliccando sul pulsante in alto</p></div>`;
     return;
   }
-  
-  booksGrid.innerHTML = '';
+  booksGrid.innerHTML='';
   data.forEach(renderBookCard);
 }
 
-function renderBookCard(book) {
-  const card = document.createElement('div'); card.className = 'book-card';
-  const coverWrap = document.createElement('div'); coverWrap.className = 'cover';
-  const img = document.createElement('img'); img.alt = book.title; coverWrap.appendChild(img);
-  const badge = document.createElement('div'); badge.className = 'badge'; badge.textContent = book.format.toUpperCase();
-  const title = document.createElement('div'); title.className = 'title'; title.textContent = book.title;
-  const author = document.createElement('div'); author.className = 'author'; author.textContent = book.author;
-  const actions = document.createElement('div'); actions.className = 'actions';
-  const openBtn = document.createElement('button'); openBtn.className = 'btn'; openBtn.textContent = 'Apri'; openBtn.onclick = () => openBook(book);
-  const delBtn = document.createElement('button'); delBtn.className = 'btn btn-danger'; delBtn.textContent = 'Elimina'; delBtn.onclick = () => deleteBook(book);
-  actions.appendChild(openBtn); actions.appendChild(delBtn);
+function renderBookCard(book){
+  const card=document.createElement('div'); card.className='book-card';
+  const coverWrap=document.createElement('div'); coverWrap.className='cover';
+  const img=document.createElement('img'); img.alt=book.title; coverWrap.appendChild(img);
+  const badge=document.createElement('div'); badge.className='badge'; badge.textContent=book.format.toUpperCase();
+  const title=document.createElement('div'); title.className='title'; title.textContent=book.title;
+  const author=document.createElement('div'); author.className='author'; author.textContent=book.author;
+  const actions=document.createElement('div'); actions.className='actions';
+  const openBtn=document.createElement('button'); openBtn.className='btn'; openBtn.textContent='Apri'; openBtn.onclick=()=>openBook(book);
+  const editBtn=document.createElement('button'); editBtn.className='btn btn-accent'; editBtn.textContent='Modifica'; editBtn.onclick=()=>editBook(book);
+  const delBtn=document.createElement('button'); delBtn.className='btn btn-danger'; delBtn.textContent='Elimina'; delBtn.onclick=()=>deleteBook(book);
+  actions.appendChild(openBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
   card.appendChild(coverWrap); card.appendChild(badge); card.appendChild(title); card.appendChild(author); card.appendChild(actions);
   booksGrid.appendChild(card);
-  generateCover(book).then(url => { if(url) img.src=url; }).catch(()=>{ img.src=placeholderCover(book.format); });
+
+  generateCover(book).then(url=>{if(url) img.src=url;}).catch(()=>{img.src=placeholderCover(book.format);});
 }
 
-async function generateCover(book) {
-  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path, 3600, { download: false });
-  if (!data?.signedUrl) return placeholderCover(book.format);
-  const url = data.signedUrl;
-  if (book.format === 'pdf') {
-    try {
-      const pdf = await pdfjsLib.getDocument(url).promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 0.3 });
-      const canvas = document.createElement('canvas');
-      canvas.width = viewport.width; canvas.height = viewport.height;
-      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-      return canvas.toDataURL('image/png');
-    } catch { return placeholderCover(book.format); }
-  }
-  return placeholderCover(book.format);
+async function generateCover(book){
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path,3600,{download:false});
+  if(!data?.signedUrl) return placeholderCover(book.format);
+  try{
+    const pdf = await pdfjsLib.getDocument(data.signedUrl).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({scale:0.3});
+    const canvas=document.createElement('canvas'); canvas.width=viewport.width; canvas.height=viewport.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport:viewport}).promise;
+    return canvas.toDataURL('image/png');
+  } catch(e){ return placeholderCover(book.format); }
 }
 
-function placeholderCover(format) {
-  const canvas = document.createElement('canvas'); canvas.width=300; canvas.height=400; const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#6d4c41'; ctx.fillRect(0,0,300,400);
+function placeholderCover(format){
+  const canvas=document.createElement('canvas'); canvas.width=300; canvas.height=400;
+  const ctx=canvas.getContext('2d'); ctx.fillStyle='#6d4c41'; ctx.fillRect(0,0,300,400);
   ctx.fillStyle='#8d6e63'; ctx.fillRect(20,20,260,360);
-  ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText(format.toUpperCase(),150,200); return canvas.toDataURL('image/png');
+  ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(format.toUpperCase(),150,200);
+  return canvas.toDataURL('image/png');
 }
 
-document.getElementById('uploadBtn').onclick = ()=>document.getElementById('uploadModal').style.display='flex';
-document.getElementById('cancelUpload').onclick = ()=>{ document.getElementById('uploadModal').style.display='none'; document.getElementById('uploadForm').reset(); };
-document.getElementById('logoutBtn').onclick = async ()=>{ await supabase.auth.signOut(); showNotification('Logout effettuato'); };
+// Modale upload
+document.getElementById('uploadBtn').onclick=()=>{document.getElementById('uploadModal').style.display='flex';};
+document.getElementById('cancelUpload').onclick=()=>{document.getElementById('uploadModal').style.display='none'; document.getElementById('uploadForm').reset();};
 
 document.getElementById('uploadForm').addEventListener('submit', async e=>{
   e.preventDefault();
   const title=document.getElementById('bookTitle').value.trim();
   const author=document.getElementById('bookAuthor').value.trim();
   const file=document.getElementById('bookFile').files[0];
-  if(!file){showNotification('Seleziona un file','error');return;}
-  
-  const ext=file.name.split('.').pop().toLowerCase();
-  const format=(ext==='pdf')?'pdf':'epub';
-  const { data: { user } } = await supabase.auth.getUser();
-  const filePath=`${user.id}/${Date.now()}_${file.name}`;
-  
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(filePath,file);
-  if(uploadError){ showNotification('Errore caricamento file',true); return; }
-  
-  const { error: dbError } = await supabase.from('books').insert([{ user_id:user.id,title,author,format,storage_path:filePath }]);
-  if(dbError){ showNotification('Errore database',true); return; }
-  
-  document.getElementById('uploadModal').style.display='none';
-  document.getElementById('uploadForm').reset();
-  showNotification('Libro caricato con successo!');
+  if(!file){ showNotification('Seleziona un file da caricare',true); return; }
+  const format=file.name.split('.').pop().toLowerCase();
+  if(format!=='pdf'){ showNotification('Formato file non supportato. Usa PDF.',true); return; }
+  const { data:{user} }=await supabase.auth.getUser();
+  const path=`${user.id}/${Date.now()}_${file.name.replace(/\s/g,'_')}`;
+  try{
+    const { error:uploadError } = await supabase.storage.from(BUCKET).upload(path,file);
+    if(uploadError) throw uploadError;
+    const { error: dbError } = await supabase.from('books').insert([{title,author,format,storage_path:path,user_id:user.id}]);
+    if(dbError) throw dbError;
+    showNotification('Libro caricato con successo!');
+    document.getElementById('uploadModal').style.display='none'; document.getElementById('uploadForm').reset();
+    loadBooks();
+  } catch(error){ showNotification('Errore caricamento: '+error.message,true); }
+});
+
+// Modale edit
+function editBook(book){
+  currentBook=book;
+  document.getElementById('editTitle').value=book.title;
+  document.getElementById('editAuthor').value=book.author;
+  document.getElementById('editModal').style.display='flex';
+}
+
+document.getElementById('cancelEdit').onclick=()=>{document.getElementById('editModal').style.display='none'; currentBook=null;};
+
+document.getElementById('editForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  if(!currentBook) return;
+  const title=document.getElementById('editTitle').value.trim();
+  const author=document.getElementById('editAuthor').value.trim();
+  const { error } = await supabase.from('books').update({title,author}).eq('id',currentBook.id);
+  if(error){ showNotification('Errore modifica: '+error.message,true); return; }
+  showNotification('Modifica salvata con successo!');
+  document.getElementById('editModal').style.display='none'; currentBook=null;
   loadBooks();
 });
 
+// Delete
 async function deleteBook(book){
-  if(!confirm('Eliminare il libro?')) return;
-  const { error: dbError } = await supabase.from('books').delete().eq('id',book.id);
-  if(dbError){ showNotification('Errore eliminazione',true); return; }
-  await supabase.storage.from(BUCKET).remove([book.storage_path]);
-  showNotification('Libro eliminato');
-  loadBooks();
+  if(!confirm('Vuoi eliminare questo libro?')) return;
+  try{
+    await supabase.storage.from(BUCKET).remove([book.storage_path]);
+    await supabase.from('books').delete().eq('id',book.id);
+    showNotification('Libro eliminato');
+    loadBooks();
+  } catch(e){ showNotification('Errore eliminazione: '+e.message,true); }
 }
 
-// PDF navigation
+// PDF Reader
+function openBook(book){
+  currentBook=book;
+  document.getElementById('readerTitle').textContent=book.title;
+  document.getElementById('reader').style.display='flex';
+  loadPdf(book);
+}
+
+async function loadPdf(book){
+  currentPage=1;
+  pdfPageNumPending=null;
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path,3600);
+  if(!data?.signedUrl){ showNotification('Errore apertura PDF',true); return; }
+  const loadingTask = pdfjsLib.getDocument(data.signedUrl);
+  loadingTask.promise.then(pdf=>{
+    currentPdf=pdf;
+    pdfTotalPages=pdf.numPages;
+    document.getElementById('pageCount').textContent=pdfTotalPages;
+    renderPage(currentPage);
+  }).catch(err=>showNotification('Errore caricamento PDF: '+err.message,true));
+}
+
 function renderPage(num){
+  if(pdfRendering){ pdfPageNumPending=num; return; }
   pdfRendering=true;
   currentPdf.getPage(num).then(page=>{
+    const viewport = page.getViewport({scale:1.2});
     const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d');
-    const viewport=page.getViewport({scale:1.5});
     canvas.height=viewport.height; canvas.width=viewport.width;
     page.render({canvasContext:ctx,viewport}).promise.then(()=>{
-      const pdfViewer=document.getElementById('pdfViewer');
-      pdfViewer.innerHTML=''; pdfViewer.appendChild(canvas);
-      document.getElementById('pageNum').textContent=currentPage;
+      const viewer=document.getElementById('pdfViewer');
+      viewer.innerHTML=''; viewer.appendChild(canvas);
+      document.getElementById('pageNum').textContent=num;
       pdfRendering=false;
-      if(pdfPageNumPending){renderPage(pdfPageNumPending); pdfPageNumPending=null;}
+      if(pdfPageNumPending!==null){ renderPage(pdfPageNumPending); pdfPageNumPending=null; }
     });
   });
 }
 
-function queueRenderPage(num){ if(pdfRendering){pdfPageNumPending=num;}else{renderPage(num);} }
-function onPrevPage(){ if(currentPage<=1)return; currentPage--; queueRenderPage(currentPage); }
-function onNextPage(){ if(currentPage>=pdfTotalPages)return; currentPage++; queueRenderPage(currentPage); }
+document.getElementById('prevPage').onclick=()=>{ if(currentPage<=1) return; currentPage--; renderPage(currentPage); };
+document.getElementById('nextPage').onclick=()=>{ if(currentPage>=pdfTotalPages) return; currentPage++; renderPage(currentPage); };
+document.getElementById('closeReader').onclick=()=>{document.getElementById('reader').style.display='none'; document.getElementById('pdfViewer').innerHTML=''; currentPdf=null;};
 
-document.getElementById('prevPage').addEventListener('click',onPrevPage);
-document.getElementById('nextPage').addEventListener('click',onNextPage);
-
-document.getElementById('closeReader').onclick = ()=>{
-  document.getElementById('reader').style.display='none';
-  if(rendition){rendition.destroy();rendition=null;}
-  currentBook=null;
-  currentPdf=null;
-}
-
-function prevChapter(){if(rendition)rendition.prev();}
-function nextChapter(){if(rendition)rendition.next();}
-document.getElementById('prevChapter').onclick=prevChapter;
-document.getElementById('nextChapter').onclick=nextChapter;
-
-async function openBook(book){
-  document.getElementById('readerTitle').textContent=book.title;
-  try{
-    const { data } = await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path,3600,{download:false});
-    if(!data?.signedUrl) throw new Error('Impossibile ottenere il file');
-    const url=data.signedUrl;
-    document.getElementById('reader').style.display='flex';
-    
-    if(book.format==='pdf'){
-      document.getElementById('pdfViewer').hidden=false;
-      document.getElementById('epub-container').hidden=true;
-      document.getElementById('pdfControls').hidden=false;
-      currentPdf=await pdfjsLib.getDocument(url).promise;
-      pdfTotalPages=currentPdf.numPages;
-      document.getElementById('pageCount').textContent=pdfTotalPages;
-      currentPage=1;
-      renderPage(currentPage);
-    }else{
-      document.getElementById('pdfViewer').hidden=true;
-      document.getElementById('epub-container').hidden=false;
-      document.getElementById('pdfControls').hidden=true;
-      if(currentBook){currentBook.destroy();currentBook=null;}
-      if(rendition){rendition.destroy();rendition=null;}
-      currentBook=ePub(url);
-      rendition=currentBook.renderTo("viewer",{width:"100%",height:600,spread:"auto"});
-      rendition.display();
-      rendition.hooks.content.register(function(contents){
-        contents.addStyles(`
-          body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif!important;line-height:1.8!important;color:#333!important;padding:2rem!important;font-size:1.1rem!important;max-width:800px!important;margin:0 auto!important;}
-          p{margin-bottom:1.5rem!important;}
-          h1,h2,h3,h4,h5,h6{color:#6d4c41!important;margin-top:2rem!important;margin-bottom:1rem!important;}
-        `);
-      });
-      rendition.on("rendered",section=>{console.log("EPUB rendered",section);});
-      rendition.on("error",err=>{console.error("EPUB error",err);document.getElementById('viewer').innerHTML=`<div class="empty-state"><h3>Errore caricamento libro</h3><p>${err.message}</p></div>`;});
-    }
-  }catch(error){console.error(error);showNotification('Errore: impossibile aprire il libro',true);}
-}
+// Logout
+document.getElementById('logoutBtn').onclick=async()=>{ await supabase.auth.signOut(); showAuth(); };
 </script>
 </body>
 </html>
