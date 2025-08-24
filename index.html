@@ -45,9 +45,9 @@
     .reader-controls{display:flex;justify-content:center;align-items:center;gap:1rem;padding:1rem;background:#f5f5f5;border-bottom:1px solid #ddd;flex-wrap:wrap}
     #pdfViewer{width:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:1rem}
     #pdfViewer canvas{display:block;margin:1rem auto;box-shadow:var(--shadow);max-width:100%}
-    #epubViewer{width:100%;height:100%;overflow:auto;background:#f9f9f9;padding:2rem;box-sizing:border-box}
-    #epubContent{max-width:800px;margin:0 auto;background:white;padding:3rem;box-shadow:var(--shadow);min-height:100%;line-height:1.8;font-size:1.1rem}
-    #epubContent p{margin-bottom:1.5rem}
+    #epub-container{width:100%;height:100%;overflow:auto;background:#f9f9f9;padding:2rem;box-sizing:border-box}
+    #epub-viewer{max-width:800px;margin:0 auto;background:white;padding:3rem;box-shadow:var(--shadow);min-height:100%;line-height:1.8;font-size:1.1rem}
+    #epub-viewer p{margin-bottom:1.5rem}
     .page-navigation{display:flex;align-items:center;gap:0.8rem}
     .epub-controls{display:flex;justify-content:center;gap:1rem;margin:1.5rem 0}
     .loading{display:flex;justify-content:center;align-items:center;height:200px}
@@ -59,7 +59,7 @@
     .notification.show{transform:translateX(0)}
     @media (max-width:768px){
       .books-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem}
-      #epubContent{padding:1.5rem}
+      #epub-viewer{padding:1.5rem}
       .reader-controls{flex-direction:column;gap:0.5rem}
     }
   </style>
@@ -125,12 +125,8 @@
   
   <div class="reader-content">
     <div id="pdfViewer" hidden></div>
-    <div id="epubViewer" hidden>
-      <div id="epubContent">
-        <div class="loading">
-          <div class="spinner"></div>
-        </div>
-      </div>
+    <div id="epub-container" hidden>
+      <div id="viewer" class="spreads"></div>
       <div class="epub-controls">
         <button class="btn" id="prevChapter">← Capitolo Precedente</button>
         <button class="btn" id="nextChapter">Capitolo Successivo →</button>
@@ -144,6 +140,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+<!-- Versione corretta di EPUB.js -->
 <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
 
 <script>
@@ -573,7 +570,7 @@ async function openBook(book) {
     if (book.format === 'pdf') {
       // Visualizzazione PDF
       document.getElementById('pdfViewer').hidden = false;
-      document.getElementById('epubViewer').hidden = true;
+      document.getElementById('epub-container').hidden = true;
       document.getElementById('pdfControls').hidden = false;
       
       currentPdf = await pdfjsLib.getDocument(url).promise;
@@ -584,59 +581,67 @@ async function openBook(book) {
     } else {
       // Visualizzazione EPUB
       document.getElementById('pdfViewer').hidden = true;
-      document.getElementById('epubViewer').hidden = false;
+      document.getElementById('epub-container').hidden = false;
       document.getElementById('pdfControls').hidden = true;
       
-      document.getElementById('epubContent').innerHTML = `
-        <div class="loading">
-          <div class="spinner"></div>
-        </div>
-      `;
-      
       // Pulisci eventuali libri precedenti
-      if (currentBook) currentBook.destroy();
+      if (currentBook) {
+        currentBook.destroy();
+        currentBook = null;
+      }
+      
+      if (rendition) {
+        rendition.destroy();
+        rendition = null;
+      }
       
       // Crea un nuovo libro EPUB
       currentBook = ePub(url);
       
-      // Quando il libro è pronto, crea il rendering
-      currentBook.ready.then(function() {
-        rendition = currentBook.renderTo("epubContent", {
-          width: "100%",
-          height: 600,
-          spread: "auto"
-        });
-        
-        rendition.display();
-        
-        // Aggiungi stili per una migliore visualizzazione
-        rendition.hooks.content.register(function(contents) {
-          contents.addStylesheet(`
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.8;
-              color: #333;
-              padding: 2rem;
-              font-size: 1.1rem;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            p {
-              margin-bottom: 1.5rem;
-            }
-            h1, h2, h3, h4, h5, h6 {
-              color: #6d4c41;
-              margin-top: 2rem;
-              margin-bottom: 1rem;
-            }
-          `);
-        });
-      }).catch(error => {
-        console.error('Errore nel rendering EPUB:', error);
-        document.getElementById('epubContent').innerHTML = `
+      // Crea il rendering
+      rendition = currentBook.renderTo("viewer", {
+        width: "100%",
+        height: 600,
+        spread: "auto"
+      });
+      
+      // Visualizza il libro
+      rendition.display();
+      
+      // Aggiungi stili per una migliore visualizzazione
+      rendition.hooks.content.register(function(contents) {
+        contents.addStylesheet(`
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            padding: 2rem;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          p {
+            margin-bottom: 1.5rem;
+          }
+          h1, h2, h3, h4, h5, h6 {
+            color: #6d4c41;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+          }
+        `);
+      });
+      
+      // Gestione errori
+      rendition.on("rendered", function(section) {
+        console.log("EPUB rendered successfully", section);
+      });
+      
+      rendition.on("error", function(err) {
+        console.error("EPUB rendering error:", err);
+        document.getElementById('viewer').innerHTML = `
           <div class="empty-state">
             <h3>Errore nel caricamento del libro</h3>
-            <p>${error.message}</p>
+            <p>${err.message}</p>
           </div>
         `;
       });
@@ -651,7 +656,6 @@ async function openBook(book) {
 document.getElementById('closeReader').onclick = () => {
   document.getElementById('reader').style.display = 'none';
   document.getElementById('pdfViewer').innerHTML = '';
-  document.getElementById('epubContent').innerHTML = '';
   
   // Reset variabili PDF
   currentPdf = null;
@@ -669,6 +673,8 @@ document.getElementById('closeReader').onclick = () => {
     currentBook.destroy();
     currentBook = null;
   }
+  
+  document.getElementById('viewer').innerHTML = '';
 };
 
 // Logout
