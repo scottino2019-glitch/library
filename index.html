@@ -57,6 +57,7 @@
     .empty-state i{font-size:3rem;margin-bottom:1rem;color:#ccc}
     .notification{position:fixed;top:20px;right:20px;padding:1rem;background:var(--primary);color:white;border-radius:var(--radius);box-shadow:var(--shadow);z-index:2000;transform:translateX(120%);transition:transform 0.3s ease}
     .notification.show{transform:translateX(0)}
+    
     /* Stili per il visualizzatore EPUB */
     #viewer {
       width: 100%;
@@ -76,6 +77,11 @@
     }
     #epub-rendition p {
       margin-bottom: 1.5rem;
+    }
+    #epub-rendition-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
     }
     @media (max-width:768px){
       .books-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:1rem}
@@ -147,9 +153,7 @@
   <div class="reader-content">
     <div id="pdfViewer" hidden></div>
     <div id="epub-container" hidden>
-      <div id="viewer">
-        <div id="epub-rendition"></div>
-      </div>
+      <div id="epub-rendition-container"></div>
       <div class="epub-controls">
         <button class="btn" id="prevChapter">← Capitolo Precedente</button>
         <span id="chapterInfo">Capitolo: -</span>
@@ -164,7 +168,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
-<!-- Versione aggiornata di EPUB.js -->
+<!-- Versione più recente di EPUB.js -->
 <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
 
 <script>
@@ -191,7 +195,6 @@ let pdfPageNumPending = null;
 let pdfTotalPages = 0;
 let currentBook = null;
 let rendition = null;
-let book;
 
 // Funzioni di utilità
 function showNotification(message, isError = false) {
@@ -610,9 +613,9 @@ async function openBook(bookData) {
       document.getElementById('pdfControls').hidden = true;
       
       // Pulisci eventuali libri precedenti
-      if (book) {
-        book.destroy();
-        book = null;
+      if (currentBook) {
+        currentBook.destroy();
+        currentBook = null;
       }
       
       if (rendition) {
@@ -621,10 +624,10 @@ async function openBook(bookData) {
       }
       
       // Crea un nuovo libro EPUB
-      book = ePub(url);
+      currentBook = ePub(url);
       
       // Crea il rendering
-      rendition = book.renderTo("epub-rendition", {
+      rendition = currentBook.renderTo("epub-rendition-container", {
         width: "100%",
         height: "100%",
         manager: "continuous",
@@ -648,7 +651,7 @@ async function openBook(bookData) {
       rendition.on("displayed", function() {
         const section = rendition.currentLocation();
         if (section && section.start) {
-          const iframe = document.querySelector("#epub-rendition iframe");
+          const iframe = document.querySelector("#epub-rendition-container iframe");
           if (iframe) {
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
             const style = iframeDoc.createElement('style');
@@ -683,7 +686,7 @@ async function openBook(bookData) {
       
       rendition.on("error", function(err) {
         console.error("EPUB rendering error:", err);
-        document.getElementById('epub-rendition').innerHTML = `
+        document.getElementById('epub-rendition-container').innerHTML = `
           <div class="empty-state">
             <h3>Errore nel caricamento del libro</h3>
             <p>${err.message}</p>
@@ -714,12 +717,12 @@ document.getElementById('closeReader').onclick = () => {
     rendition.destroy();
     rendition = null;
   }
-  if (book) {
-    book.destroy();
-    book = null;
+  if (currentBook) {
+    currentBook.destroy();
+    currentBook = null;
   }
   
-  document.getElementById('epub-rendition').innerHTML = '';
+  document.getElementById('epub-rendition-container').innerHTML = '';
 };
 
 // Logout
