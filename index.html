@@ -1,142 +1,73 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My Library – La tua libreria digitale</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library – Libreria personale completa</title>
   <style>
-    :root {
-      --primary-color: #6d4c41;
-      --primary-light: #9c786c;
-      --primary-dark: #40241a;
-      --secondary-color: #f5f5f5;
-      --accent-color: #a1887f;
-      --text-color: #333;
-      --text-light: #fff;
-      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; }
-    body { background: #f9f9f9; color: var(--text-color); line-height: 1.6; }
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-    header { background: var(--primary-color); color: var(--text-light); padding: 1rem 0; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100; }
-    .header-content { display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; gap: .5rem; }
-    nav ul { display: flex; list-style: none; gap: 1.25rem; }
-    nav a { color: var(--text-light); text-decoration: none; opacity: .95; }
-    nav a:hover { opacity: 1; }
-
-    .library { padding: 2rem 0; }
-    .library-header { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
-    .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
-
-    .btn { background: var(--primary-color); color: #fff; border: 0; padding: .7rem 1rem; border-radius: 8px; cursor: pointer; box-shadow: var(--shadow); transition: transform .15s ease, background .2s ease; display: inline-flex; align-items: center; gap: .5rem; }
-    .btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
-    .btn.secondary { background: #e0e0e0; color: #222; }
-
-    .searchbar { display: flex; gap: .5rem; align-items: center; }
-    .input { padding: .7rem .9rem; border-radius: 8px; border: 1px solid #ddd; background: #fff; min-width: 220px; box-shadow: inset 0 1px 0 rgba(0,0,0,.02); }
-
-    .books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-    .book-card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); transition: transform .2s ease, box-shadow .2s ease; cursor: pointer; display:flex; flex-direction: column; }
-    .book-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,.12); }
-    .book-cover { height: 230px; background: linear-gradient(135deg, var(--accent-color), var(--primary-light)); color: #fff; display: grid; place-items: center; font-size: 3rem; }
-    .book-info { padding: .9rem; display:flex; flex-direction: column; gap: .35rem; }
-    .book-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .book-author { color: #666; font-size: .95rem; }
-
-    .empty { text-align:center; color:#777; padding: 2rem 0; }
-
-    /* Modal base */
-    .modal { display:none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
-    .modal-content { background:#fff; border-radius: 14px; width: min(520px, 92vw); padding: 1.25rem; box-shadow: 0 20px 40px rgba(0,0,0,.18); }
-    .modal-header { display:flex; align-items:center; justify-content: space-between; margin-bottom: 1rem; }
-    .close-modal { background: none; border: none; font-size: 1.75rem; line-height: 1; cursor: pointer; color:#333; }
-    .form { display:flex; flex-direction: column; gap: .8rem; }
-    .field { display:flex; flex-direction: column; gap: .4rem; }
-    .field label { font-size: .95rem; color:#333; }
-    .field input[type="text"], .field input[type="file"] { border: 1px solid #ddd; border-radius: 8px; padding: .7rem .9rem; }
-
-    /* Reader */
-    .reader { display:none; position: fixed; inset: 0; background:#fff; z-index: 1001; flex-direction: column; }
-    .reader-header { background: var(--primary-color); color: #fff; padding: .9rem 1rem; display:flex; align-items:center; justify-content: space-between; gap: .5rem; }
-    .reader-title { font-size: 1rem; font-weight: 600; line-height: 1.1; }
-    .close-reader { background: none; border: none; color:#fff; font-size: 1.5rem; cursor: pointer; }
-    .reader-content { flex: 1; display:flex; justify-content: center; padding: 1rem; overflow: auto; }
-    .pdf-container, .epub-container { width: 100%; height: 100%; max-width: 900px; }
-    .hint { font-size: .9rem; color:#eee; }
-
-    @media (max-width: 768px) {
-      .books-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-      .book-cover { height: 180px; font-size: 2.4rem; }
-      .reader-title { font-size: .95rem; }
-    }
+    /* Stili completi */
+    :root { --primary-color: #6d4c41; --primary-dark:#40241a; --text-color:#333; --shadow:0 4px 6px rgba(0,0,0,0.1); }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,sans-serif;}
+    body{background:#f9f9f9;color:var(--text-color);line-height:1.6;}
+    header{background:var(--primary-color);color:#fff;padding:1rem;text-align:center;font-weight:bold;}
+    main{max-width:1200px;margin:auto;padding:1rem;}
+    .hidden{display:none;}
+    .btn{background:var(--primary-color);color:#fff;padding:.6rem 1rem;border:none;border-radius:6px;cursor:pointer;}
+    .btn:hover{background:var(--primary-dark);}
+    input{padding:.6rem;border:1px solid #ccc;border-radius:4px;width:100%;}
+    form{display:flex;flex-direction:column;gap:.75rem;background:#fff;padding:1rem;border-radius:8px;box-shadow:var(--shadow);max-width:400px;margin:auto;}
+    .library-header{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;}
+    .books-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;}
+    .book-card{background:#fff;border-radius:8px;box-shadow:var(--shadow);padding:1rem;cursor:pointer;transition:.2s;}
+    .book-card:hover{transform:translateY(-3px);}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);justify-content:center;align-items:center;z-index:1000;}
+    .modal form{max-width:500px;}
+    .reader{display:none;position:fixed;inset:0;background:#fff;z-index:1001;flex-direction:column;}
+    .reader-header{background:var(--primary-color);color:#fff;padding:.8rem;display:flex;justify-content:space-between;}
+    .reader-content{flex:1;overflow:auto;padding:1rem;}
+    .pdf-container,.epub-container{width:100%;height:100%;max-width:900px;margin:auto;}
   </style>
 </head>
 <body>
-  <header>
-    <div class="container header-content">
-      <div class="logo"><span>📚</span> <span>Carina</span></div>
-      <nav>
-        <ul>
-          <li><a href="#" class="active">Libreria</a></li>
-          <li><a href="#" id="favoritesBtn" title="WIP">Preferiti</a></li>
-          <li><a href="#" id="settingsBtn" title="WIP">Impostazioni</a></li>
-        </ul>
-      </nav>
-    </div>
-  </header>
+  <header>📚 Carina – Libreria personale</header>
 
-  <main class="container">
-    <section class="library">
-      <div class="library-header">
-        <h1>La tua libreria</h1>
-        <div class="actions">
-          <div class="searchbar">
-            <input id="searchInput" class="input" placeholder="Cerca per titolo o autore…" />
-            <button class="btn secondary" id="clearSearch">Pulisci</button>
-          </div>
-          <button class="btn" id="uploadBtn">➕ Carica libro</button>
-          <button class="btn secondary" id="refreshBtn">⟳ Aggiorna</button>
-        </div>
-      </div>
-      <div id="status" class="empty">Caricamento…</div>
-      <div class="books-grid" id="booksGrid" hidden></div>
-    </section>
+  <!-- LOGIN -->
+  <main id="authView">
+    <h2>Accedi o Registrati</h2>
+    <form id="authForm">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit" class="btn">Login / Registrazione</button>
+    </form>
   </main>
 
-  <!-- Modal: Caricamento libro -->
-  <div class="modal" id="uploadModal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
-      <div class="modal-header">
-        <h2 id="uploadTitle">Carica un nuovo libro</h2>
-        <button class="close-modal" id="closeUpload">×</button>
-      </div>
-      <form class="form" id="uploadForm">
-        <div class="field">
-          <label for="bookTitle">Titolo</label>
-          <input type="text" id="bookTitle" required />
-        </div>
-        <div class="field">
-          <label for="bookAuthor">Autore</label>
-          <input type="text" id="bookAuthor" required />
-        </div>
-        <div class="field">
-          <label for="bookFile">File del libro (PDF o EPUB)</label>
-          <input type="file" id="bookFile" accept=".pdf,.epub" required />
-        </div>
-        <button type="submit" class="btn">Carica</button>
-      </form>
+  <!-- LIBRERIA -->
+  <main id="appView" class="hidden">
+    <div class="library-header">
+      <h2>La tua libreria</h2>
+      <button id="logoutBtn" class="btn">Logout</button>
     </div>
+    <div>
+      <button id="uploadBtn" class="btn">Carica libro</button>
+    </div>
+    <div id="booksGrid" class="books-grid"></div>
+  </main>
+
+  <!-- Modal caricamento libro -->
+  <div id="uploadModal" class="modal">
+    <form id="uploadForm">
+      <input type="text" id="bookTitle" placeholder="Titolo" required>
+      <input type="text" id="bookAuthor" placeholder="Autore" required>
+      <input type="file" id="bookFile" accept=".pdf,.epub" required>
+      <button type="submit" class="btn">Carica</button>
+    </form>
   </div>
 
   <!-- Reader -->
   <div class="reader" id="reader">
     <div class="reader-header">
-      <div>
-        <div class="reader-title" id="readerTitle">Titolo</div>
-        <div class="hint" id="readerHint"></div>
-      </div>
-      <button class="close-reader" id="closeReader">×</button>
+      <div id="readerTitle">Titolo</div>
+      <button class="btn" id="closeReader">Chiudi</button>
     </div>
     <div class="reader-content">
       <div class="pdf-container" id="pdfViewer" hidden></div>
@@ -144,303 +75,101 @@
     </div>
   </div>
 
-  <!-- Dependences -->
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js" integrity="sha384-7q1F8nqYj8qzI4L2oxc2y5ZzL6cWwqHkJH35y1j0K1cThkEKk7yD3H1wV5xYd8oK" crossorigin="anonymous"></script>
-  <!-- pdf.js (viewer light) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
-  <!-- epub.js -->
   <script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
-
   <script>
-    // =========================
-    // 1) CONFIGURAZIONE
-    // =========================
-    // Sostituisci questi valori con quelli del tuo progetto Supabase (Impostazioni -> API)
-    const SUPABASE_URL = "https://https://zflxzjapcclnscbziwlt.supabase.co";      // <-- cambia
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmbHh6amFwY2NsbnNjYnppd2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5ODIwMzEsImV4cCI6MjA3MTU1ODAzMX0.8W3FI_fsZtA0EH0TnHJwRbLbvaU476mLAW0DVw7mItI";                      // <-- cambia
-    // Nome del bucket su Storage (creane uno pubblico chiamato "library" o rinomina qui)
-    const STORAGE_BUCKET = "library";
+    const SUPABASE_URL = "https://zflxzjapcclnscbziwlt.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmbHh6amFwY2NsbnNjYnppd2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5ODIwMzEsImV4cCI6MjA3MTU1ODAzMX0.8W3FI_fsZtA0EH0TnHJwRbLbvaU476mLAW0DVw7mItI";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const BUCKET = "library";
 
-    // Se preferisci link firmati (più sicuro) metti a true; se usi bucket pubblico puoi lasciare false
-    const USE_SIGNED_URLS = false;   // true = crea URL firmati temporanei, false = URL pubblici
-    const SIGNED_URL_EXPIRES = 60 * 60; // 1 ora
+    const authView=document.getElementById('authView');
+    const appView=document.getElementById('appView');
+    const authForm=document.getElementById('authForm');
+    const booksGrid=document.getElementById('booksGrid');
 
-    // Inizializza client
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // =========================
-    // 2) STATO & DOM
-    // =========================
-    let allBooks = []; // cache locale
-
-    const booksGrid   = document.getElementById('booksGrid');
-    const statusEl    = document.getElementById('status');
-    const uploadBtn   = document.getElementById('uploadBtn');
-    const refreshBtn  = document.getElementById('refreshBtn');
-
-    const uploadModal = document.getElementById('uploadModal');
-    const closeUpload = document.getElementById('closeUpload');
-    const uploadForm  = document.getElementById('uploadForm');
-
-    const searchInput = document.getElementById('searchInput');
-    const clearSearch = document.getElementById('clearSearch');
-
-    const reader      = document.getElementById('reader');
-    const readerTitle = document.getElementById('readerTitle');
-    const readerHint  = document.getElementById('readerHint');
-    const pdfViewer   = document.getElementById('pdfViewer');
-    const epubViewer  = document.getElementById('epubViewer');
-    const closeReader = document.getElementById('closeReader');
-
-    // =========================
-    // 3) UTILITIES SUPABASE
-    // =========================
-    async function listBooks() {
-      const { data, error } = await supabase
-        .from('books')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+    async function checkSession(){
+      const { data } = await supabase.auth.getSession();
+      if(data.session){ showApp(); loadBooks(); } else { showAuth(); }
     }
+    function showAuth(){authView.classList.remove('hidden');appView.classList.add('hidden');}
+    function showApp(){authView.classList.add('hidden');appView.classList.remove('hidden');}
 
-    async function uploadFileToStorage(file) {
-      const path = `books/${Date.now()}_${file.name}`;
-      const { data, error } = await supabase
-        .storage
-        .from(STORAGE_BUCKET)
-        .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-      if (error) throw error;
-      return data.path; // storage path
-    }
-
-    async function getUrlForPath(storagePath) {
-      if (USE_SIGNED_URLS) {
-        const { data, error } = await supabase
-          .storage
-          .from(STORAGE_BUCKET)
-          .createSignedUrl(storagePath, SIGNED_URL_EXPIRES);
-        if (error) throw error;
-        return data.signedUrl;
-      } else {
-        const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath);
-        return data.publicUrl;
+    authForm.addEventListener('submit',async(e)=>{
+      e.preventDefault();
+      const email=document.getElementById('email').value;
+      const password=document.getElementById('password').value;
+      let { error }=await supabase.auth.signInWithPassword({email,password});
+      if(error){
+        const { error:signUpError }=await supabase.auth.signUp({email,password});
+        if(signUpError){alert(signUpError.message);return;}
       }
-    }
+      checkSession();
+    });
 
-    async function insertBook({ title, author, format, storage_path, cover_emoji }) {
-      const { data, error } = await supabase
-        .from('books')
-        .insert([{ title, author, format, storage_path, cover_emoji }])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    }
-
-    // =========================
-    // 4) RENDER LIBRI
-    // =========================
-    function renderBooks(list) {
-      booksGrid.innerHTML = '';
-      if (!list.length) {
-        statusEl.textContent = 'Nessun libro. Caricane uno con "Carica libro".';
-        statusEl.hidden = false;
-        booksGrid.hidden = true;
-        return;
-      }
-      statusEl.hidden = true;
-      booksGrid.hidden = false;
-
-      list.forEach((book) => {
-        const card = document.createElement('div');
-        card.className = 'book-card';
-        card.innerHTML = `
-          <div class="book-cover">${book.cover_emoji || (book.format === 'pdf' ? '📄' : '📓')}</div>
-          <div class="book-info">
-            <div class="book-title" title="${book.title}">${book.title}</div>
-            <div class="book-author">${book.author}</div>
-          </div>
-        `;
-        card.addEventListener('click', () => openBook(book));
+    async function loadBooks(){
+      const { data: { user } }=await supabase.auth.getUser();
+      const { data,error }=await supabase.from('books').select('*').eq('user_id',user.id).order('created_at',{ascending:false});
+      if(error){alert(error.message);return;}
+      booksGrid.innerHTML='';
+      data.forEach(b=>{
+        const card=document.createElement('div');
+        card.className='book-card';
+        card.textContent=b.title+" – "+b.author;
+        card.addEventListener('click',()=>openBook(b));
         booksGrid.appendChild(card);
       });
     }
 
-    function applySearch() {
-      const q = searchInput.value.trim().toLowerCase();
-      if (!q) return renderBooks(allBooks);
-      const filtered = allBooks.filter(b =>
-        b.title.toLowerCase().includes(q) || (b.author || '').toLowerCase().includes(q)
-      );
-      renderBooks(filtered);
-    }
-
-    // =========================
-    // 5) OPEN BOOK (PDF / EPUB)
-    // =========================
-    let currentRendition = null; // epub.js handler
-
-    async function openBook(book) {
-      try {
-        readerTitle.textContent = book.title;
-        readerHint.textContent = '';
-        pdfViewer.hidden = true;
-        epubViewer.hidden = true;
-
-        const url = await getUrlForPath(book.storage_path);
-
-        if (book.format === 'pdf') {
-          // SEMPLICE: usa <iframe> nativo per i PDF (compatibile e veloce)
-          pdfViewer.innerHTML = '';
-          const iframe = document.createElement('iframe');
-          iframe.src = url + '#toolbar=1&navpanes=0';
-          iframe.style.width = '100%';
-          iframe.style.height = '100%';
-          iframe.setAttribute('title', book.title);
-          pdfViewer.appendChild(iframe);
-          pdfViewer.hidden = false;
-          readerHint.textContent = 'Suggerimento: puoi usare il menu del PDF per scaricare o stampare.';
-        } else {
-          // EPUB con epub.js
-          epubViewer.innerHTML = '';
-          const bookEpub = ePub(url);
-          currentRendition = bookEpub.renderTo('epubViewer', { width: '100%', height: '100%' });
-          await currentRendition.display();
-
-          // Navigazione base con frecce tastiera
-          function onKey(e){
-            if (e.key === 'ArrowRight') currentRendition.next();
-            if (e.key === 'ArrowLeft') currentRendition.prev();
-          }
-          document.addEventListener('keydown', onKey, { once: true });
-          epubViewer.hidden = false;
-          readerHint.textContent = 'Usa ← → per cambiare pagina.';
-        }
-        reader.style.display = 'flex';
-      } catch (err) {
-        alert('Errore apertura libro: ' + err.message);
-      }
-    }
-
-    function closeBook() {
-      reader.style.display = 'none';
-      // pulizia viewer
-      pdfViewer.innerHTML = '';
-      epubViewer.innerHTML = '';
-      currentRendition = null;
-    }
-
-    // =========================
-    // 6) EVENTI UI
-    // =========================
-    uploadBtn.addEventListener('click', () => {
-      uploadModal.style.display = 'flex';
-      uploadModal.setAttribute('aria-hidden','false');
-    });
-    closeUpload.addEventListener('click', () => {
-      uploadModal.style.display = 'none';
-      uploadModal.setAttribute('aria-hidden','true');
-      uploadForm.reset();
-    });
-    window.addEventListener('click', (e) => { if (e.target === uploadModal) closeUpload.click(); });
-
-    refreshBtn.addEventListener('click', init);
-
-    uploadForm.addEventListener('submit', async (e) => {
+    document.getElementById('uploadBtn').onclick=()=>{
+      document.getElementById('uploadModal').style.display='flex';
+    };
+    document.getElementById('uploadForm').addEventListener('submit',async(e)=>{
       e.preventDefault();
-      const title = document.getElementById('bookTitle').value.trim();
-      const author = document.getElementById('bookAuthor').value.trim();
-      const file = document.getElementById('bookFile').files[0];
-      if (!file) return;
-      const format = file.name.split('.').pop().toLowerCase();
-      if (!['pdf','epub'].includes(format)) {
-        alert('Formato non supportato. Carica un PDF o EPUB.');
-        return;
-      }
-      try {
-        // 1) Carica file su Storage
-        const storage_path = await uploadFileToStorage(file);
-        // 2) Inserisci metadati in tabella
-        const newBook = await insertBook({
-          title,
-          author,
-          format,
-          storage_path,
-          cover_emoji: format === 'pdf' ? '📄' : '📓'
-        });
-        // 3) Aggiorna lista
-        allBooks = [newBook, ...allBooks];
-        applySearch();
-        // 4) Chiudi modal
-        closeUpload.click();
-        alert('Libro caricato con successo!');
-      } catch (err) {
-        alert('Errore caricamento: ' + err.message);
-      }
+      const title=document.getElementById('bookTitle').value;
+      const author=document.getElementById('bookAuthor').value;
+      const file=document.getElementById('bookFile').files[0];
+      if(!file)return;
+      const format=file.name.split('.').pop().toLowerCase();
+      if(!['pdf','epub'].includes(format)){alert('Formato non valido');return;}
+      const { data: { user } }=await supabase.auth.getUser();
+      // 1) Carica file su Storage
+      const path=`${user.id}/${Date.now()}_${file.name}`;
+      const { error:uploadErr }=await supabase.storage.from(BUCKET).upload(path,file);
+      if(uploadErr){alert(uploadErr.message);return;}
+      // 2) Salva metadati
+      const { error:dbErr }=await supabase.from('books').insert([{title,author,format,storage_path:path,user_id:user.id}]);
+      if(dbErr){alert(dbErr.message);return;}
+      document.getElementById('uploadModal').style.display='none';
+      loadBooks();
     });
 
-    searchInput.addEventListener('input', applySearch);
-    clearSearch.addEventListener('click', () => { searchInput.value=''; applySearch(); });
-
-    document.getElementById('closeReader').addEventListener('click', closeBook);
-
-    // =========================
-    // 7) AVVIO
-    // =========================
-    async function init() {
-      statusEl.hidden = false; statusEl.textContent = 'Caricamento…'; booksGrid.hidden = true;
-      try {
-        allBooks = await listBooks();
-        applySearch();
-      } catch (err) {
-        statusEl.textContent = 'Errore caricamento: ' + err.message + '\nControlla le impostazioni Supabase e le policy RLS.';
+    async function openBook(book){
+      document.getElementById('readerTitle').textContent=book.title;
+      const { data }=supabase.storage.from(BUCKET).getPublicUrl(book.storage_path);
+      const url=data.publicUrl;
+      document.getElementById('reader').style.display='flex';
+      if(book.format==='pdf'){
+        document.getElementById('pdfViewer').innerHTML=`<iframe src="${url}" style="width:100%;height:100%;"></iframe>`;
+        document.getElementById('pdfViewer').hidden=false;
+        document.getElementById('epubViewer').hidden=true;
+      }else{
+        document.getElementById('epubViewer').hidden=false;
+        document.getElementById('pdfViewer').hidden=true;
+        const rendition=ePub(url).renderTo('epubViewer',{width:'100%',height:'100%'});
+        rendition.display();
       }
     }
 
-    init();
+    document.getElementById('closeReader').onclick=()=>{
+      document.getElementById('reader').style.display='none';
+      document.getElementById('pdfViewer').innerHTML='';
+      document.getElementById('epubViewer').innerHTML='';
+    };
+    document.getElementById('logoutBtn').onclick=async()=>{await supabase.auth.signOut();showAuth();};
+
+    checkSession();
   </script>
-
-  <!--
-  ==========================================
-  NOTE DI SETUP (leggi e poi rimuovi se vuoi)
-  ==========================================
-  1) In Supabase crea la tabella "books" con SQL:
-
-     create table if not exists books (
-       id bigint generated by default as identity primary key,
-       title text not null,
-       author text not null,
-       format text not null check (format in ('pdf','epub')),
-       storage_path text not null,
-       cover_emoji text,
-       created_at timestamp with time zone default now()
-     );
-
-  2) Crea un bucket di Storage chiamato "library".
-     - Se vuoi link pubblici: imposta il bucket come "Public".
-     - Se vuoi privacy: lascialo privato e metti USE_SIGNED_URLS = true.
-
-  3) (Opzionale ma consigliato) Policy RLS su table "books":
-     - Attiva RLS.
-     - Se app senza login e sola lettura pubblica:
-       create policy "Public read books" on books for select using (true);
-       -- Per permettere insert pubbliche (demo):
-       create policy "Public insert books" on books for insert with check (true);
-       -- In produzione, collega gli insert a utenti autenticati.
-
-  4) Inserisci in alto SUPABASE_URL e SUPABASE_ANON_KEY.
-
-  5) Se usi bucket privato, assicurati che l'utente abbia permessi per createSignedUrl.
-
-  6) Visualizzazione PDF: qui usiamo un <iframe> (semplice e molto compatibile).
-     Se vuoi un rendering completo con pdf.js (multi-pagina personalizzabile),
-     puoi sostituire l'iframe con il renderer di pdf.js.
-
-  7) EPUB: usiamo epub.js con navigazione base (frecce ← →).
-
-  Buona lettura! 📖
-  -->
 </body>
 </html>
