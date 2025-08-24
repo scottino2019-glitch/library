@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carina – Libreria Digitale</title>
   <style>
-    :root { --primary:#6d4c41; --primary-dark:#40241a; --shadow:0 4px 8px rgba(0,0,0,.15); }
+    :root { 
+      --primary:#6d4c41; 
+      --primary-dark:#40241a; 
+      --shadow:0 4px 8px rgba(0,0,0,.15); 
+    }
     *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
     body{background:#fafafa;color:#333}
     header{background:var(--primary);color:#fff;padding:1rem;text-align:center;font-weight:bold}
@@ -27,9 +31,12 @@
     .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);justify-content:center;align-items:center;z-index:1000}
     .reader{display:none;position:fixed;inset:0;background:#fff;z-index:1001;flex-direction:column}
     .reader-header{background:var(--primary);color:#fff;padding:.8rem;display:flex;justify-content:space-between;align-items:center}
-    .reader-content{flex:1;overflow:auto;padding:1rem}
-    #pdfViewer canvas{display:block;margin:1rem auto;box-shadow:var(--shadow)}
+    .reader-content{flex:1;overflow:auto;padding:1rem;position:relative}
+    .reader-controls{display:flex;justify-content:center;align-items:center;gap:1rem;padding:0.5rem;background:#f5f5f5;border-bottom:1px solid #ddd}
+    #pdfViewer{width:100%;overflow:auto;display:flex;flex-direction:column;align-items:center}
+    #pdfViewer canvas{display:block;margin:1rem auto;box-shadow:var(--shadow);max-width:100%}
     .epub-container{width:100%;height:100%}
+    .page-navigation{display:flex;align-items:center;gap:0.5rem}
   </style>
 </head>
 <body>
@@ -70,15 +77,31 @@
     <div id="readerTitle">Titolo</div>
     <button class="btn" id="closeReader">Chiudi</button>
   </div>
+  <div class="reader-controls" id="pdfControls" hidden>
+    <button class="btn" id="prevPage">Precedente</button>
+    <div class="page-navigation">
+      <span>Pagina: </span>
+      <span id="pageNum">0</span>
+      <span> di </span>
+      <span id="pageCount">0</span>
+    </div>
+    <button class="btn" id="nextPage">Successiva</button>
+  </div>
   <div class="reader-content">
     <div id="pdfViewer" hidden></div>
     <div class="epub-container" id="epubViewer" hidden></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3/dist/epub.min.js"></script>
+<!-- Versione corretta di PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js"></script>
+<!-- Versione più recente di EPUB.js -->
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
 <script>
+// Configurazione PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
 const SUPABASE_URL="https://zflxzjapcclnscbziwlt.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpmbHh6amFwY2NsbnNjYnppd2x0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU5ODIwMzEsImV4cCI6MjA3MTU1ODAzMX0.8W3FI_fsZtA0EH0TnHJwRbLbvaU476mLAW0DVw7mItI";
 const BUCKET="library";
@@ -87,6 +110,13 @@ const authView=document.getElementById('authView');
 const appView=document.getElementById('appView');
 const booksGrid=document.getElementById('booksGrid');
 const authMsg=document.getElementById('authMsg');
+
+// Variabili per la gestione della visualizzazione PDF
+let currentPdf = null;
+let currentPage = 1;
+let pdfRendering = false;
+let pdfPageNumPending = null;
+let pdfTotalPages = 0;
 
 function showAuth(){authView.classList.remove('hidden');appView.classList.add('hidden');}
 function showApp(){authView.classList.add('hidden');appView.classList.remove('hidden');}
@@ -138,12 +168,19 @@ async function generateCover(book){
  if(!s?.signedUrl)return placeholderCover(book.format);
  const url=s.signedUrl;
  if(book.format==='pdf'){
- const pdf=await pdfjsLib.getDocument(url).promise;
- const page=await pdf.getPage(1);
- const viewport=page.getViewport({scale:0.3});
- const canvas=document.createElement('canvas');canvas.width=viewport.width;canvas.height=viewport.height;
- await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
- return canvas.toDataURL('image/png');
+   try {
+     const pdf = await pdfjsLib.getDocument(url).promise;
+     const page = await pdf.getPage(1);
+     const viewport = page.getViewport({scale:0.3});
+     const canvas = document.createElement('canvas');
+     canvas.width = viewport.width;
+     canvas.height = viewport.height;
+     await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+     return canvas.toDataURL('image/png');
+   } catch (error) {
+     console.error("Errore generazione copertina PDF:", error);
+     return placeholderCover(book.format);
+   }
  }
  return placeholderCover(book.format);
 }
@@ -172,42 +209,138 @@ document.getElementById('uploadModal').style.display='none';document.getElementB
 });
 
 async function deleteBook(book){
+ if(!confirm('Sei sicuro di voler eliminare questo libro?')) return;
  await supabase.storage.from(BUCKET).remove([book.storage_path]);
  await supabase.from('books').delete().eq('id',book.id);
  loadBooks();
 }
 
+// Funzioni per la navigazione del PDF
+function renderPage(pageNum) {
+  pdfRendering = true;
+  
+  currentPdf.getPage(pageNum).then(function(page) {
+    const viewport = page.getViewport({scale: 1.2});
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    const renderContext = {
+      canvasContext: ctx,
+      viewport: viewport
+    };
+    
+    const renderTask = page.render(renderContext);
+    
+    renderTask.promise.then(function() {
+      pdfRendering = false;
+      
+      const pdfViewer = document.getElementById('pdfViewer');
+      pdfViewer.innerHTML = '';
+      pdfViewer.appendChild(canvas);
+      
+      document.getElementById('pageNum').textContent = pageNum;
+      
+      if (pdfPageNumPending !== null) {
+        renderPage(pdfPageNumPending);
+        pdfPageNumPending = null;
+      }
+    });
+  });
+}
+
+function queueRenderPage(num) {
+  if (pdfRendering) {
+    pdfPageNumPending = num;
+  } else {
+    renderPage(num);
+  }
+}
+
+function onPrevPage() {
+  if (currentPage <= 1) {
+    return;
+  }
+  currentPage--;
+  queueRenderPage(currentPage);
+}
+
+function onNextPage() {
+  if (currentPage >= pdfTotalPages) {
+    return;
+  }
+  currentPage++;
+  queueRenderPage(currentPage);
+}
+
+// Aggiungi event listeners per la navigazione
+document.getElementById('prevPage').addEventListener('click', onPrevPage);
+document.getElementById('nextPage').addEventListener('click', onNextPage);
+
 async function openBook(book){
- document.getElementById('readerTitle').textContent=book.title;
- const {data:s}=await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path,3600,{download:false});
+ document.getElementById('readerTitle').textContent = book.title;
+ const {data:s} = await supabase.storage.from(BUCKET).createSignedUrl(book.storage_path,3600,{download:false});
  if(!s?.signedUrl){alert('Impossibile aprire libro');return;}
- const url=s.signedUrl;
- document.getElementById('reader').style.display='flex';
- if(book.format==='pdf'){
- document.getElementById('pdfViewer').hidden=false;
- document.getElementById('epubViewer').hidden=true;
- document.getElementById('pdfViewer').innerHTML='';
- const pdf=await pdfjsLib.getDocument(url).promise;
- const p=await pdf.getPage(1);
- const viewport=p.getViewport({scale:1.2});
- const canvas=document.createElement('canvas');canvas.width=viewport.width;canvas.height=viewport.height;
- await p.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
- document.getElementById('pdfViewer').appendChild(canvas);
+ const url = s.signedUrl;
+ document.getElementById('reader').style.display = 'flex';
+ 
+ if(book.format === 'pdf'){
+   document.getElementById('pdfViewer').hidden = false;
+   document.getElementById('epubViewer').hidden = true;
+   document.getElementById('pdfControls').hidden = false;
+   
+   try {
+     currentPdf = await pdfjsLib.getDocument(url).promise;
+     pdfTotalPages = currentPdf.numPages;
+     document.getElementById('pageCount').textContent = pdfTotalPages;
+     currentPage = 1;
+     renderPage(currentPage);
+   } catch (error) {
+     console.error("Errore caricamento PDF:", error);
+     alert("Errore nel caricamento del PDF");
+   }
  } else {
- document.getElementById('pdfViewer').hidden=true;
- document.getElementById('epubViewer').hidden=false;
- document.getElementById('epubViewer').innerHTML='';
- const rendition=ePub(url).renderTo('epubViewer',{width:'100%',height:'100%'});
- rendition.display();
+   document.getElementById('pdfViewer').hidden = true;
+   document.getElementById('epubViewer').hidden = false;
+   document.getElementById('pdfControls').hidden = true;
+   document.getElementById('epubViewer').innerHTML = '';
+   
+   try {
+     // Creazione dell'epub con la versione aggiornata di EPUB.js
+     const bookEPub = ePub(url);
+     const rendition = bookEPub.renderTo('epubViewer', {
+       width: '100%',
+       height: '100%',
+       spread: 'auto'
+     });
+     
+     rendition.display();
+     
+     // Aggiungi controlli di navigazione per EPUB
+     rendition.on('rendered', function(section) {
+       document.getElementById('readerTitle').textContent = `${book.title} - ${section ? section.name : ''}`;
+     });
+   } catch (error) {
+     console.error("Errore caricamento EPUB:", error);
+     alert("Errore nel caricamento dell'EPUB");
+   }
  }
 }
 
-document.getElementById('closeReader').onclick=()=>{
-document.getElementById('reader').style.display='none';
-document.getElementById('pdfViewer').innerHTML='';
-document.getElementById('epubViewer').innerHTML='';
+document.getElementById('closeReader').onclick = () => {
+  document.getElementById('reader').style.display = 'none';
+  document.getElementById('pdfViewer').innerHTML = '';
+  document.getElementById('epubViewer').innerHTML = '';
+  // Reset delle variabili PDF
+  currentPdf = null;
+  currentPage = 1;
+  pdfRendering = false;
+  pdfPageNumPending = null;
+  pdfTotalPages = 0;
 };
-document.getElementById('logoutBtn').onclick=async()=>{await supabase.auth.signOut();};
+
+document.getElementById('logoutBtn').onclick = async() => {await supabase.auth.signOut();};
 </script>
 </body>
 </html>
